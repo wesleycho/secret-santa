@@ -1,66 +1,16 @@
 import React, { Component } from 'react';
-import {concat, difference, equals, find, head, map, tail} from 'ramda';
+import {compose, converge, head, last, identity, init, map, prepend, sort, sortBy, zip} from 'ramda';
 import {people} from './people';
 import logo from './logo.svg';
 import './App.css';
 
 class App extends Component {
-  createMatch(people, currentMatches) {
-    let secretSantas = getSecretSantas(currentMatches);
-    let targets = getSecretSantaTargets(currentMatches);
-    let peopleAsSecretSantas = difference(people, secretSantas);
-    let peopleAsTargets = difference(people, targets);
-
-    if (peopleAsSecretSantas.length === 2) {
-      let secretSanta1 = head(peopleAsSecretSantas);
-      let secretSanta2 = tail(peopleAsSecretSantas);
-
-      let target1 = find(person => equals(person, secretSanta1), peopleAsTargets);
-      let target2 = find(person => equals(person, secretSanta2), peopleAsTargets)
-
-      if (target1 && target2) {
-        return concat(currentMatches, [
-          [secretSanta1, target2],
-          [secretSanta2, target1]
-        ]);
-      }
-
-      if (target1) {
-        return concat(currentMatches, [
-          [secretSanta1, head(difference(peopleAsTargets, [target1]))],
-          [secretSanta2, target1]
-        ]);
-      }
-
-      if (target2) {
-        return concat(currentMatches, [
-          [secretSanta1, target2],
-          [secretSanta2, head(difference(peopleAsTargets, [target2]))]
-        ]);
-      }
-
-      return concat(currentMatches, [
-        [secretSanta1, head(peopleAsTargets)],
-        [secretSanta2, tail(peopleAsTargets)]
-      ]);
-    }
-
-    let secretSanta = head(peopleAsSecretSantas);
-    peopleAsTargets = difference(peopleAsTargets, secretSanta);
-
-    let randomIdx = Math.floor(Math.random() * peopleAsTargets.length);
-
-    return concat(currentMatches, [
-      [secretSanta, peopleAsTargets[randomIdx]]
-    ]);
-  }
-
   createMatches() {
-    let matches = [];
+    const shuffle = sortBy(Math.random);
+    const shift = converge(prepend, [last, init])
 
-    while (!equals(matches.length, people.length)) {
-      matches = this.createMatch(people, matches);
-    }
+    const secretSanta = compose(converge(zip, [identity, shift]), shuffle);
+    const matches = sort((a, b) => alphabetical(head(a), head(b)), secretSanta(people));
 
     return matches;
   }
@@ -98,6 +48,18 @@ class App extends Component {
 }
 
 export default App;
+
+function alphabetical(a, b) {
+  if (a > b) {
+    return 1;
+  }
+
+  if (a < b) {
+    return -1;
+  }
+
+  return 0;
+}
 
 function getSecretSantas(currentMatches) {
   return map(match => match[0], currentMatches);
